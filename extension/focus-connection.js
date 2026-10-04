@@ -1,108 +1,60 @@
-// FocusConnection
-//
-// Maintain connection between Focus app and browser extension
-// Pass focus/unfocus messages along 
-//
 function FocusConnection() {
-
     this.isFocusing = false;
-    this.version = "0.0";
-    this.platform = "unknown";
-    this.min_port = config.min_port;
-    this.max_port = config.max_port;
-    this.port = config.max_port;
+    this.version = config.version;
+    this.platform = config.browser;
+    let port = config.max_port;
+    let socket;
+    let retryTimer;
+    let pingTimer;
+    let connectTimer;
 
-    var self = this;
-
-    function get_endpoint() {
-        return "ws://" + config.host_local + ":" + self.port + "/" + config.browser;
-    }
-
-    var endpoint = get_endpoint();
-
-    console.log("Creating new Focus connection to " + endpoint);
-
-    var allowedMsgs = ["focus", "unfocus", "block"];
-
-    var ws = new ReconnectingWebSocket(endpoint);
-
-    this.focus = () => {
-        console.log("Focus");
-        this.isFocusing = true;
-        this.onfocus();
-    };
-
-    this.unfocus = function () {
-        console.log("Unfocus");
-        this.isFocusing = false;
-    };
-
-    this.cleanup = function () {
-        console.log("Cleanup");
-        this.isFocusing = false;
-    };
-
-    this.check = function (tabId, url) {
-        if (!this.isFocusing) return false;
-        ws.send(JSON.stringify({
-            "msg": "check",
-            "tabId": tabId,
-            "url": url
-        }));
-    };
-
-    ws.ping = function () {
-        console.log("Sending ping to Focus");
-        ws.send(JSON.stringify({
-            "msg": "ping",
-            "platform": self.platform,
-            "version": self.version
-        }));
-    };
-
-    ws.onopen = function () {
-        console.log("Websocket is open");
-        ws.ping();
-    }
-
-    ws.onerror = function (err) {
-        console.log("Websocket error: " + err);
-        self.port = self.port - 1;
-        if (self.port < self.min_port) {
-            self.port = self.max_port;
-        }
-        endpoint = get_endpoint();
-        ws.URL = endpoint;
-        self.cleanup();
-    };
-
-    ws.onclose = function () {
-        console.log("Websocket is closed");
-        self.cleanup();
-    };
-
-    ws.onmessage = function (evt) {
-        console.log("Received message from server");
-
+    const send = (message) => {
+        if (!socket || socket.readyState !== WebSocket.OPEN) return false;
         try {
-            var data = JSON.parse(evt.data);
-        } catch (err) {
-            console.log("Error parsing JSON: " + evt.data);
-            return;
+            socket.send(JSON.stringify(message));
+            return true;
+        } catch (_) {
+            socket.close();
+            return false;
         }
-
-        if (!data) {
-            console.log("Invalid data from server: " + evt.data);
-            return;
-        }
-
-        if (allowedMsgs.indexOf(data.msg) == -1) {
-            console.log("Unknown message: " + evt.data);
-            return;
-        }
-
-        self[data.msg](data);
     };
+    this.check = (tabId, url) => this.isFocusing && send({ msg: "check", tabId, url });
+    const ping = () => send({ msg: "ping", platform: this.platform, version: this.version });
 
-    this.connect = ws.connect;
+    this.connect = () => {
+        if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
+        clearTimeout(retryTimer);
+        const current = new WebSocket(`ws://${config.host_local}:${port}/${config.browser}`);
+        socket = current;
+        connectTimer = setTimeout(() => current.close(), 5000);
+        current.onopen = () => {
+            clearTimeout(connectTimer);
+            ping();
+            clearInterval(pingTimer);
+            pingTimer = setInterval(ping, 20000);
+        };
+        current.onerror = () => current.close();
+        current.onclose = () => {
+            if (socket !== current) return;
+            clearTimeout(connectTimer);
+            clearInterval(pingTimer);
+            socket = undefined;
+            this.isFocusing = false;
+            port = port > config.min_port ? port - 1 : config.max_port;
+            retryTimer = setTimeout(this.connect, 1000);
+        };
+        current.onmessage = (event) => {
+            let data;
+            try { data = JSON.parse(event.data); } catch (_) { return; }
+            if (!data || typeof data !== "object") return;
+            if (data.msg === "focus") {
+                this.isFocusing = true;
+                this.onfocus?.();
+            } else if (data.msg === "unfocus") {
+                this.isFocusing = false;
+            } else if (data.msg === "block" && this.isFocusing) {
+                this.block?.(data);
+            }
+        };
+    };
 }

@@ -17,7 +17,7 @@ var BrowserDetect = {
         }
     },
     searchVersion: function (dataString) {
-        var index = dataString.indexOf(this.versionSearchString);
+        var index = (dataString || "").indexOf(this.versionSearchString);
         if (index == -1) return;
         return parseFloat(dataString.substring(index + this.versionSearchString.length + 1));
     },
@@ -45,7 +45,7 @@ var BrowserDetect = {
         identity: "Safari",
         versionSearch: "Version"
     }, { // old Opera
-        prop: window.opera,
+        prop: typeof window !== "undefined" && window.opera,
         identity: "Opera",
         versionSearch: "Version"
     }, {
