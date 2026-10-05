@@ -36,7 +36,7 @@ function setup() {
 
 test('MV3 worker boots without window and retains Chrome localhost protocol', () => {
     const { socket, intervals } = setup();
-    assert.equal(socket.url, 'ws://localhost:8918/Chrome');
+    assert.equal(socket.url, 'ws://127.0.0.1:8918/Chrome');
     socket.open();
     assert.equal(socket.sent[0].msg, 'ping');
     assert.equal(intervals[0].delay, 20000);
@@ -81,7 +81,7 @@ test('disconnect rotates ports and alarm reconnect does not duplicate sockets', 
     socket.open(); socket.close();
     assert.equal(intervals[0].canceled, true);
     timers.find(timer => timer.delay === 1000).callback();
-    assert.equal(sockets[1].url, 'ws://localhost:8917/Chrome');
+    assert.equal(sockets[1].url, 'ws://127.0.0.1:8917/Chrome');
     chrome.alarms.onAlarm.emit({ name: 'focus-reconnect' });
     assert.equal(sockets.length, 2);
 });

@@ -7,7 +7,7 @@ Unofficial Manifest V3 adaptation of [Brad Jasper’s Focus extension](https://g
 1. Download this repository using **Code → Download ZIP**, then extract it.
 2. Open your browser’s extensions settings and enable **Developer mode**.
 3. Choose **Load unpacked** and select the **extension** folder inside the extracted repository.
-4. Confirm version **2.8.2**. Keep only one Focus extension enabled.
+4. Confirm version **2.8.3**. Keep only one Focus extension enabled.
 5. Start a Focus session with the desired website in its blocklist, then reload that website.
 
 Requires Chromium 116 or later and support for unpacked extensions. After updating files, click Reload on the extension’s card.
@@ -16,14 +16,14 @@ Requires Chromium 116 or later and support for unpacked extensions. After updati
 
 - Manifest V3 service worker replaces the persistent background page.
 - Worker-compatible browser detection and current extension URL API.
-- Local WebSocket connection with 20-second keepalive pings and reconnect alarms.
+- Local WebSocket connection through explicit IPv4 loopback (`127.0.0.1`), with 20-second keepalive pings and reconnect alarms. This avoids the observed `localhost` connection failures in the ChatGPT browser.
 - Navigation, tab activation, and single-page application route checks.
 - Support for both localhost block responses and the installed Focus app’s file-based block-page response.
 - Malformed-message and stale-response handling.
 
 ## Verification
 
-The user confirmed Twitter blocking worked in the ChatGPT desktop app’s embedded browser after loading version 2.8.2. This is a single-environment confirmation, not a guarantee for every browser or app version.
+The user confirmed Reddit blocking worked in the ChatGPT desktop app’s embedded browser after loading version 2.8.3. This is a single-environment confirmation, not a guarantee for every browser or app version.
 
 Run the six mocked worker regression tests with Node.js:
 

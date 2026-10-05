@@ -6,7 +6,7 @@ var config = {};
 config.version = version;
 config.min_port = 8913;
 config.max_port = 8918;
-config.host_local = "localhost";
+config.host_local = "127.0.0.1";
 config.browser = BrowserDetect.browser;
 config.block_urls = [
     "http://localhost:8919/block/",
